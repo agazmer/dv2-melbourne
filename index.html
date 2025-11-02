@@ -1,0 +1,14 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Urban Heat vs Tree Cover — Greater Melbourne</title>
+<script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+<div id="vis"></div>
+<script>
+  const spec = { $schema:"https://vega.github.io/schema/vega-lite/v5.json",
+    data:{ values:[{x:"A",y:1},{x:"B",y:2}] }, mark:"bar",
+    encoding:{ x:{field:"x",type:"nominal"}, y:{field:"y",type:"quantitative"} }
+  };
+  vegaEmbed('#vis', spec, {actions:false});
+</script>
