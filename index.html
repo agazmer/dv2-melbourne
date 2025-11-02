@@ -1,14 +1,789 @@
 <!doctype html>
-<meta charset="utf-8">
-<title>Urban Heat vs Tree Cover — Greater Melbourne</title>
-<script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
-<script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
-<script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
-<div id="vis"></div>
-<script>
-  const spec = { $schema:"https://vega.github.io/schema/vega-lite/v5.json",
-    data:{ values:[{x:"A",y:1},{x:"B",y:2}] }, mark:"bar",
-    encoding:{ x:{field:"x",type:"nominal"}, y:{field:"y",type:"quantitative"} }
-  };
-  vegaEmbed('#vis', spec, {actions:false});
-</script>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Urban Heat vs Tree Cover - Greater Melbourne (DV2)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Vega, Vega-Lite, and vega-embed -->
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+
+    <style>
+        :root {
+            --bg: #eaeae2;
+            /* page background */
+            --section: #f6f6f0;
+            /* light panel boxes */
+            --ink: #222;
+            /* main text */
+            --muted: #666;
+            /* secondary text */
+            --brand: #14532d;
+            /* accent if needed */
+        }
+
+        html,
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+            color: var(--ink);
+            background: var(--bg);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            min-width: 1280px;
+        }
+
+        header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee
+        }
+
+        .row {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            align-items: flex-start
+        }
+
+        .wrap {
+            max-width: 1920px;
+            margin: 0 auto;
+            padding: 16px 180px;
+        }
+
+        .rule {
+            width: 220px;
+            height: 5px;
+            background: var(--accent);
+            border-radius: 999px;
+            margin: 12px 0 24px 0;
+        }
+
+        #map-1,
+        #map-2 {
+            flex: 1 1 520px;
+            min-width: 420px
+        }
+
+        header.hero {
+            max-width: 1920px;
+            margin: 0 auto;
+            padding: 48px 200px 8px;
+        }
+
+        header.hero h1 {
+            font-size: 56px;
+            line-height: 1.05;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin: 0 0 8px;
+        }
+
+        header.hero p.kicker {
+            margin: 0;
+            color: var(--muted);
+            font-size: 18px;
+        }
+
+        .section-box {
+            background: var(--section);
+            border: 1px solid rgba(0, 0, 0, .05);
+            border-radius: 16px;
+            padding: 24px 180px;
+            margin: 24px auto;
+        }
+
+        .filler {
+            max-width: 1400px;
+            margin: 12px auto;
+            padding: 0 120px;
+            color: var(--muted);
+        }
+
+        .hero-photo {
+            width: 100%;
+            height: 210px;
+            /* short ribbon feel */
+            background-image: url("src/Melbourne.jpg");
+            background-size: cover;
+            background-position: center 45%;
+            border-radius: 16px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, .08);
+            margin: 10px 0 18px 0;
+        }
+
+        /* intro text just under the photo */
+        .intro {
+            max-width: 92ch;
+            color: var(--ink);
+            font-size: 18px;
+        }
+
+        .intro p {
+            margin: 10px 0 0 0;
+        }
+
+        .intro .muted {
+            color: var(--muted);
+        }
+
+        /* Section heading look (same family, slightly bold) */
+        .section-title {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -.01em;
+        }
+
+        .charts-row {
+            gap: 24px;
+            justify-content: space-between;
+        }
+
+        #map-1,
+        #map-2 {
+            flex: 0 0 700px;
+            /* fixed width per map */
+            min-width: 700px;
+        }
+
+        #maps.section-box {
+            padding: 20px 24px 24px;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="hero">
+        <div class="wrap">
+            <h1>Urban Heat vs Tree Cover - Greater Melbourne</h1>
+            <p class="kicker">Tree cover and urban heat across Melbourne's SA2s (2018-19) - patterns and standouts.</p>
+        </div>
+    </header>
+
+    <div class="wrap">
+        <div class="rule"></div>
+        <figure class="hero-photo" aria-label="Melbourne skyline and suburbs"></figure>
+
+        <div class="intro">
+            <p><strong>Melbourne, at a glance.</strong> Greater Melbourne is a sprawling, fast-growing city where leafy
+                eastern and southeastern suburbs contrast with newer, lower-canopy growth areas to the west and north.
+                Summer heat can sit longer over built-up areas, making local shade and vegetation matter more.</p>
+            <p class="muted"><strong>What we're studying.</strong> <em>Urban Heat Island (UHI)</em> is the extra warmth
+                in urban areas compared to their surroundings. We pair that with <em>tree cover (%)</em> - a simple,
+                comparable measure of canopy presence - to see how heat patterns shift with greenery, and which SA2s run
+                hotter or cooler than peers with similar tree cover.</p>
+        </div>
+    </div>
+
+
+    <section class="wrap section-box" id="maps">
+        <h2 class="section-title" style="margin:0">Greater Melbourne at a glance</h2>
+        <p class="section-note" style="margin:10px 0 16px;color:var(--muted)">
+            Left: <em>Mean UHI</em> in 2018-19 (warmer colours = hotter). Right: <em>Tree cover (%)</em>
+            (darker greens = more canopy). Compare eastern leafy areas with newer, drier growth in the west/north.
+        </p>
+
+        <div class="row charts-row">
+            <div id="map-1"></div>
+            <div id="map-2"></div>
+        </div>
+    </section>
+
+
+    <!-- Scatterplot section -->
+    <section class="wrap section-box">
+        <h2 style="margin:24px 0 8px">How tree cover relates to urban heat (SA2s)</h2>
+        <p class="lede">
+            Each dot is one SA2, and together they slope gently downward: more tree cover, lower mean UHI. It's not a
+            cliff-urban climate is multi-factor-but the drift is steady enough to matter. Around 40-60% canopy, the
+            cloud of points begins to thin on the hotter side, and by 70-90% there are only a few stragglers bucking the
+            trend. Those stragglers are the interesting stories: places that are greener yet still run warm (perhaps due
+            to wide asphalt, industrial surfaces, or local siting) and places that are less green but cooler than you'd
+            expect (often benefiting from water, elevation, or breezier exposure). The regression line captures the
+            average relationship; the scatter around it points to practical, local levers.
+        </p>
+        <div id="scatter" style="max-width: 1560px"></div>
+    </section>
+
+    <!-- Top-N bars section -->
+    <section class="wrap">
+        <h2 style="margin:24px 0 8px">Top SA2s - choose metric & how many to show</h2>
+        <p class="lede">
+            This ranked view is a quick way to answer "where most? Select Mean UHI to see the hottest SA2s climb to the
+            top; switch to Tree cover (%) to surface the city's green champions. The slider lets you decide whether you
+            want a short watchlist of 10 or a broader top-N sweep. What emerges is the city's "long tail": a small set
+            of extreme cases at either end, and a much larger middle that can shift with modest policy nudges. Treat
+            this section as a shortlist builder-targets for tree-planting or maintenance funding on one setting, and
+            modelling exemplars on the other.
+        </p>
+        <div id="bars" style="max-width:1200px"></div>
+    </section>
+
+    <!-- Ridge plot section -->
+    <section class="wrap">
+        <h2 style="margin:24px 0 8px">How UHI distributions shift with tree cover</h2>
+        <p class="lede">
+            Here, each horizontal ridge is a smoothed distribution of SA2 temperatures within a 10-percentage-point band
+            of tree cover. Read from top to bottom and you'll see the bulges migrate left: the typical SA2 in the 10-20%
+            band sits warmer than the typical SA2 in the 40-50% band, which in turn runs warmer than the 70-80% band.
+            The spread narrows slightly as canopy increases, suggesting that trees not only cool on average but also
+            temper extremes. Ridgelines are useful because they show distributions, not just single numbers: a
+            high-canopy suburb can still be hot if other conditions dominate, but it's less common-and that rarity is
+            exactly what the shapes reveal.
+        </p>
+        <div id="ridges"></div>
+    </section>
+
+    <!-- Residuals section -->
+    <section class="wrap">
+        <h2 style="margin:24px 0 8px">Hotter or cooler than peers (within similar tree cover)</h2>
+        <p class="lede">
+            Fairness check: instead of comparing every SA2 to the whole city, we compare each one to its peers with
+            similar canopy. The grey bars mark the interquartile range (the middle 50%) for each tree-cover band.
+            Squares to the right are hotter than their peers; squares to the left are cooler than their peers. This view
+            helps separate "you're hot because you're bare" from "you're hot even when you're as green as your peers.""
+            The former points to tree-planting; the latter points to surfaces, shade, wind, water, or micro-siting fixes
+            (e.g., lighter pavements, awnings, or heat-safe design). Hovering reveals the peer average and the residual
+            in °C-se it to spot where small design changes could reap outsized comfort gains.
+        </p>
+        <div id="residuals" style="max-width:1200px"></div>
+    </section>
+
+    <!-- Dumbbell chart section -->
+    <section class="wrap">
+        <h2 style="margin:24px 0 8px">Who stands out: expected vs observed UHI</h2>
+        <p class="lede">
+            Each line pairs two numbers for the same SA2: the band mean (what we'd expect given its tree-cover peers)
+            and the observed UHI (what it actually experiences). Long lines signal big gaps. When the square sits far to
+            the right of the dot, the suburb is hotter than expected and likely needs non-canopy interventions; when it
+            sits left, it's cooler than expected-useful case studies to copy. Adjust the mode to show the hottest vs
+            peers, the coolest vs peers, or simply the biggest gaps. This is the "action list" view: who to help first,
+            and who to learn from.
+        </p>
+        <div id="dumbbell" style="max-width:1200px"></div>
+    </section>
+
+
+
+    <!-- All scripts at the end so targets exist -->
+    <script>
+        // Shared data references
+        const topo = {
+            url: "data/processed/melb_sa2_simplified.topojson",
+            format: { type: "topojson", feature: "melb_sa2" }
+        };
+
+        // Parse numeric CSV fields up front
+        const csvFrom = {
+            data: {
+                url: "data/processed/melb_sa2_stats.csv",
+                format: { type: "csv", parse: { uhi_mean: "number", tree_sum: "number", tree_count: "number" } }
+            },
+            key: "SA2_CODE21",
+            fields: ["uhi_mean", "SA2_NAME21", "tree_sum", "tree_count"]
+        };
+
+        const baseGeom = {
+            width: 600,
+            height: 560,
+            projection: { type: "mercator" },
+            data: topo,
+            transform: [
+                { lookup: "properties.SA2_CODE21", from: csvFrom },
+                { calculate: "datum.tree_count > 0 ? (datum.tree_sum/datum.tree_count)*100 : null", as: "tree_pct" }
+            ],
+            mark: { type: "geoshape" },
+            encoding: {
+                stroke: { value: "#ffffff" },
+                strokeWidth: { value: 0.5 }
+            },
+            config: { view: { stroke: null } }
+        };
+
+        // LEFT MAP: Mean UHI
+        const specUHI = {
+            ...baseGeom,
+            title: { text: "Mean UHI (2018-19, °C)", offset: 20 },
+            encoding: {
+                ...baseGeom.encoding,
+                color: {
+                    field: "uhi_mean",
+                    type: "quantitative",
+                    title: "Mean UHI (2018-19, °C)",
+                    scale: { scheme: "reds" }
+                },
+                tooltip: [
+                    { field: "SA2_NAME21", type: "nominal", title: "SA2" },
+                    { field: "properties.SA2_CODE21", type: "nominal", title: "SA2 code" },
+                    { field: "uhi_mean", type: "quantitative", title: "UHI mean (°C)", format: ".2f" },
+                    { field: "tree_pct", type: "quantitative", title: "Tree cover (%)", format: ".1f" }
+                ]
+            }
+        };
+
+        // RIGHT MAP: Tree cover %
+        const specTree = {
+            ...baseGeom,
+            title: { text: "Tree cover (%)", offset: 20 },
+            encoding: {
+                ...baseGeom.encoding,
+                color: {
+                    field: "tree_pct",
+                    type: "quantitative",
+                    title: "Tree cover (%)",
+                    scale: { scheme: "greens" }
+                },
+                tooltip: [
+                    { field: "SA2_NAME21", type: "nominal", title: "SA2" },
+                    { field: "properties.SA2_CODE21", type: "nominal", title: "SA2 code" },
+                    { field: "tree_pct", type: "quantitative", title: "Tree cover (%)", format: ".1f" },
+                    { field: "uhi_mean", type: "quantitative", title: "UHI mean (°C)", format: ".2f" }
+                ]
+            }
+        };
+
+        // Render maps
+        vegaEmbed("#map-1", specUHI, { actions: false });
+        vegaEmbed("#map-2", specTree, { actions: false });
+
+
+        // SCATTER: Tree cover (%) vs Mean UHI (°C)
+        const scatterSpec = {
+            width: 980,
+            height: 380,
+            data: {
+                url: "data/processed/melb_sa2_stats.csv",
+                format: { type: "csv", parse: { uhi_mean: "number", tree_sum: "number", tree_count: "number", SA2_NAME21: "string", SA2_CODE21: "string" } }
+            },
+            transform: [
+                { calculate: "datum.tree_count > 0 ? (datum.tree_sum/datum.tree_count)*100 : null", as: "tree_pct" },
+                { filter: "isValid(datum.tree_pct) && isValid(datum.uhi_mean)" }
+            ],
+            layer: [
+                {
+                    mark: { type: "point", filled: true, opacity: 0.7, size: 45 },
+                    encoding: {
+                        x: { field: "tree_pct", type: "quantitative", title: "Tree cover (%)" },
+                        y: { field: "uhi_mean", type: "quantitative", title: "Mean UHI (2018-19, °C)" },
+                        color: { field: "tree_pct", type: "quantitative", scale: { scheme: "goldgreen" }, title: "Tree cover (%)" },
+                        tooltip: [
+                            { field: "SA2_NAME21", type: "nominal", title: "SA2" },
+                            { field: "SA2_CODE21", type: "nominal", title: "SA2 code" },
+                            { field: "tree_pct", type: "quantitative", title: "Tree cover (%)", format: ".1f" },
+                            { field: "uhi_mean", type: "quantitative", title: "UHI mean (°C)", format: ".2f" }
+                        ]
+                    }
+                },
+                {
+                    transform: [{ regression: "uhi_mean", on: "tree_pct" }],
+                    mark: { type: "line", color: "#333", strokeWidth: 2 },
+                    encoding: {
+                        x: { field: "tree_pct", type: "quantitative" },
+                        y: { field: "uhi_mean", type: "quantitative" }
+                    }
+                }
+            ],
+            config: { axis: { labelFontSize: 12, titleFontSize: 12 }, view: { stroke: null } }
+        };
+
+        // Render scatter
+        vegaEmbed("#scatter", scatterSpec, { actions: false });
+
+
+        // TOP-N BARS: by selected metric (UHI mean or tree cover %)
+        const barsSpec = {
+            $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+            width: 980,
+            height: 520,
+            data: {
+                url: "data/processed/melb_sa2_stats.csv",
+                format: { type: "csv", parse: { uhi_mean: "number", tree_sum: "number", tree_count: "number" } }
+            },
+
+            // Interactive controls (dropdown + slider)
+            params: [
+                {
+                    name: "metric",
+                    value: "uhi_mean",
+                    bind: { input: "select", options: ["uhi_mean", "tree_pct"], labels: ["Mean UHI (°C)", "Tree cover (%)"] }
+                },
+                {
+                    name: "N",
+                    value: 15,
+                    bind: { input: "range", min: 5, max: 30, step: 1 }
+                }
+            ],
+
+            transform: [
+                // compute tree cover %
+                { calculate: "datum.tree_count > 0 ? (datum.tree_sum/datum.tree_count)*100 : null", as: "tree_pct" },
+
+                // fold both metrics, then keep only the one selected via the dropdown
+                { fold: ["uhi_mean", "tree_pct"], as: ["metric", "value"] },
+                { filter: "datum.metric === metric && isValid(datum.value)" },
+
+                // rank & keep top N by the selected metric
+                { window: [{ op: "rank", as: "rank" }], sort: [{ field: "value", order: "descending" }] },
+                { filter: "datum.rank <= N" }
+            ],
+
+            mark: { type: "bar" },
+
+            encoding: {
+                x: {
+                    field: "value", type: "quantitative",
+                    title: "Value (°C for UHI, % for tree cover)"
+                },
+                y: {
+                    field: "SA2_NAME21", type: "nominal",
+                    sort: "-x", title: "SA2 (Top N)"
+                },
+
+                // one consistent, readable ramp regardless of metric
+                color: { field: "value", type: "quantitative", scale: { scheme: "tealblues" }, legend: null },
+
+                tooltip: [
+                    { field: "SA2_NAME21", type: "nominal", title: "SA2" },
+                    { field: "SA2_CODE21", type: "nominal", title: "SA2 code" },
+                    { field: "uhi_mean", type: "quantitative", title: "UHI mean (°C)", format: ".2f" },
+                    { field: "tree_pct", type: "quantitative", title: "Tree cover (%)", format: ".1f" }
+                ]
+            },
+
+            title: { text: "Top SA2s by selected metric", anchor: "start", dy: -10 },
+            config: { view: { stroke: null }, axis: { labelFontSize: 12, titleFontSize: 12 } }
+        };
+
+        // Render bars
+        vegaEmbed("#bars", barsSpec, { actions: false });
+
+
+        // RIDGE PLOT: UHI distributions by tree-cover bin
+        const ridgesSpec = {
+            $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+
+            // Load and parse once
+            data: {
+                url: "data/processed/melb_sa2_stats.csv",
+                format: {
+                    type: "csv",
+                    parse: { uhi_mean: "number", tree_sum: "number", tree_count: "number" }
+                }
+            },
+
+            transform: [
+                // Compute tree cover %
+                { calculate: "datum.tree_count > 0 ? (datum.tree_sum/datum.tree_count)*100 : null", as: "tree_pct" },
+                { filter: "isValid(datum.tree_pct) && isValid(datum.uhi_mean)" },
+
+                // Bin tree cover into 10% bands and keep numeric starts for sorting
+                { bin: { step: 10, extent: [0, 100] }, field: "tree_pct", as: ["tree_bin_start", "tree_bin_end"] },
+                { calculate: "format(datum.tree_bin_start, '.0f') + '-' + format(datum.tree_bin_end, '.0f') + '%'", as: "bin_label" },
+
+                // Kernel density of UHI per bin (shared extent + stable smoothing)
+                {
+                    density: "uhi_mean",
+                    groupby: ["bin_label", "tree_bin_start"],
+                    as: ["uhi", "density"],
+                    extent: [0, 12],
+                    bandwidth: 0.5
+                }
+            ],
+
+            facet: {
+                row: {
+                    field: "bin_label",
+                    // Sort by numeric start so rows are 0-10, 10-20,... 90-100
+                    sort: { field: "tree_bin_start", op: "min", order: "ascending" },
+                    title: "Tree cover (%) bin"
+                }
+            },
+
+            spec: {
+                width: 440,
+                height: 40,
+
+                layer: [
+                    {
+                        mark: { type: "area", color: "#cc6655", opacity: 0.30 },
+                        encoding: {
+                            x: {
+                                field: "uhi", type: "quantitative",
+                                title: "Mean UHI (2018-19, °C)",
+                                scale: { domain: [0, 12] },
+                                axis: { grid: true }
+                            },
+                            y: { field: "density", type: "quantitative", axis: null }
+                        }
+                    },
+                    {
+                        mark: { type: "line", color: "#8a2e2a", strokeWidth: 1.2 },
+                        encoding: {
+                            x: { field: "uhi", type: "quantitative", scale: { domain: [0, 12] } },
+                            y: { field: "density", type: "quantitative", axis: null },
+                            tooltip: [
+                                { field: "bin_label", title: "Tree-cover bin" },
+                                { field: "uhi", type: "quantitative", title: "UHI (°C)", format: ".2f" },
+                                { field: "density", type: "quantitative", title: "Density", format: ".3f" }
+                            ]
+                        }
+                    }
+                ]
+            },
+
+            // Share the UHI axis across rows; each row has its own density scale
+            resolve: { scale: { x: "shared" } },
+
+            config: { view: { stroke: null } }
+        };
+
+        // Render ridges
+        vegaEmbed("#ridges", ridgesSpec, { actions: false });
+
+
+        // RESIDUALS: UHI vs peers in same tree-cover band
+        const residualSpec = {
+            width: 980,
+            height: 560,
+            data: {
+                url: "data/processed/melb_sa2_stats.csv",
+                format: { type: "csv", parse: { uhi_mean: "number", tree_sum: "number", tree_count: "number" } }
+            },
+
+            transform: [
+                // derive tree cover %
+                { calculate: "datum.tree_count > 0 ? (datum.tree_sum / datum.tree_count) * 100 : null", as: "tree_pct" },
+                // remove invalids BEFORE binning
+                { filter: "isValid(datum.tree_pct)" },
+                // bin tree cover in 10% steps (0-10, 10-20,..., 90-100)
+                { bin: { step: 10, extent: [0, 100] }, field: "tree_pct", as: ["tbin_s", "tbin_e"] },
+                // nice band label e.g., "30-40%"
+                { calculate: "format(datum.tbin_s, '.0f') + '-' + format(datum.tbin_e, '.0f') + '%'", as: "tband" },
+                // keep start value for sorting bands top-to-bottom
+                { calculate: "datum.tbin_s", as: "tband_start" },
+                // average UHI per band (peer average)
+                { joinaggregate: [{ op: "mean", field: "uhi_mean", as: "band_mean" }], groupby: ["tband"] },
+                // residual = observed - band mean
+                { calculate: "datum.uhi_mean - datum.band_mean", as: "residual" },
+                // (optional) hide extreme outliers
+                { filter: "abs(datum.residual) <= 4.0" },
+
+                // small vertical jitter so overlapping points separate
+                { calculate: "(random() - 0.5) * 10", as: "jitter" }
+            ],
+
+            layer: [
+                // IQR bars per band (behind the points)
+                {
+                    transform: [
+                        {
+                            aggregate: [
+                                { op: "q1", field: "residual", as: "q1" },
+                                { op: "q3", field: "residual", as: "q3" },
+                                { op: "median", field: "residual", as: "med" },
+                                { op: "min", field: "residual", as: "min" },
+                                { op: "max", field: "residual", as: "max" }
+                            ],
+                            groupby: ["tband", "tband_start"]
+                        }
+                    ],
+                    mark: { type: "bar", height: 12, color: "#d9d9d9", opacity: 0.8 },
+                    encoding: {
+                        y: { field: "tband", type: "nominal", sort: { field: "tband_start", order: "ascending" }, title: "Tree cover (%) band" },
+                        x: { field: "q1", type: "quantitative", title: null, scale: { domain: [-4, 4] } },
+                        x2: { field: "q3" },
+                        tooltip: [
+                            { field: "tband", title: "Tree cover band" },
+                            { field: "min", title: "Min residual (°C)", format: ".2f" },
+                            { field: "q1", title: "Q1 residual (°C)", format: ".2f" },
+                            { field: "med", title: "Median (°C)", format: ".2f" },
+                            { field: "q3", title: "Q3 residual (°C)", format: ".2f" },
+                            { field: "max", title: "Max residual (°C)", format: ".2f" }
+                        ]
+                    }
+                },
+
+                // peer median tick per band
+                {
+                    transform: [
+                        {
+                            aggregate: [{ op: "median", field: "residual", as: "med" }],
+                            groupby: ["tband", "tband_start"]
+                        }
+                    ],
+                    mark: { type: "tick", color: "#666", size: 18, thickness: 2 },
+                    encoding: {
+                        y: { field: "tband", type: "nominal", sort: { field: "tband_start", order: "ascending" } },
+                        x: { field: "med", type: "quantitative", scale: { domain: [-4, 4] } },
+                        tooltip: [
+                            { field: "tband", title: "Tree cover band" },
+                            { field: "med", title: "Band median residual (°C)", format: ".2f" }
+                        ]
+                    }
+                },
+
+                // dots (squares) for each SA2
+                {
+                    mark: { type: "square", size: 55, opacity: 0.9, stroke: "white", strokeWidth: 0.6 },
+                    encoding: {
+                        y: { field: "tband", type: "nominal", sort: { field: "tband_start", order: "ascending" } },
+                        yOffset: { field: "jitter", type: "quantitative" },
+                        x: {
+                            field: "residual", type: "quantitative",
+                            title: "Residual vs peers (°C)  <- cooler | hotter ->",
+                            scale: { domain: [-4, 4] }
+                        },
+                        color: {
+                            field: "residual", type: "quantitative",
+                            scale: { scheme: "redblue", domain: [-3, 0, 3], reverse: true },
+                            title: "Residual (°C)"
+                        },
+                        tooltip: [
+                            { field: "SA2_NAME21", title: "SA2" },
+                            { field: "SA2_CODE21", title: "SA2 code" },
+                            { field: "tree_pct", title: "Tree cover (%)", format: ".1f" },
+                            { field: "band_mean", title: "Band mean UHI (°C)", format: ".2f" },
+                            { field: "uhi_mean", title: "Observed UHI (°C)", format: ".2f" },
+                            { field: "residual", title: "Residual (°C)", format: ".2f" }
+                        ]
+                    }
+                }
+            ],
+
+            config: { view: { stroke: null }, axis: { labelFontSize: 12, titleFontSize: 12 } }
+        };
+
+        // Render residuals
+        vegaEmbed("#residuals", residualSpec, { actions: false });
+
+
+        // DUMBBELL CHART: Expected vs observed UHI for top N standouts
+        const dumbbellSpec = {
+            $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+            width: 980,
+            height: { step: 28 },            // auto height based on N
+            data: {
+                url: "data/processed/melb_sa2_stats.csv",
+                format: {
+                    type: "csv",
+                    parse: {
+                        uhi_mean: "number", tree_sum: "number", tree_count: "number",
+                        SA2_NAME21: "string", SA2_CODE21: "string"
+                    }
+                }
+            },
+
+            // Interactive controls
+            params: [
+                {
+                    name: "mode",
+                    value: "Hottest vs peers",
+                    bind: {
+                        input: "select",
+                        options: ["Hottest vs peers", "Coolest vs peers", "Biggest gap (|resid|)"]
+                    }
+                },
+                {
+                    name: "N",
+                    value: 15,
+                    bind: { input: "range", min: 5, max: 30, step: 1 }
+                }
+            ],
+
+            transform: [
+                // compute tree cover (%) and 10%-wide bin for the peer group
+                { calculate: "datum.tree_count > 0 ? (datum.tree_sum/datum.tree_count)*100 : null", as: "tree_pct" },
+                { bin: { step: 10, extent: [0, 100] }, field: "tree_pct", as: ["tc_bin_start", "tc_bin_end"] },
+
+                // assign band mean UHI to each row (expected value within the peer band)
+                { joinaggregate: [{ op: "mean", field: "uhi_mean", as: "band_mean" }], groupby: ["tc_bin_start"] },
+
+                // residual = observed - expected
+                { calculate: "datum.uhi_mean - datum.band_mean", as: "resid" },
+                { calculate: "abs(datum.resid)", as: "abs_resid" },
+
+                // ranks for the three selection modes
+                { window: [{ op: "rank", as: "rank_hot" }], sort: [{ field: "resid", order: "descending" }] },
+                { window: [{ op: "rank", as: "rank_cool" }], sort: [{ field: "resid", order: "ascending" }] },
+                { window: [{ op: "rank", as: "rank_abs" }], sort: [{ field: "abs_resid", order: "descending" }] },
+
+                // filter to the top N depending on mode
+                {
+                    filter:
+                        "mode=='Hottest vs peers' ? datum.rank_hot <= N : " +
+                        "(mode=='Coolest vs peers' ? datum.rank_cool <= N : datum.rank_abs <= N)"
+                }
+            ],
+
+            title: { text: "Expected vs observed UHI (top N standouts)", anchor: "start", dy: -10 },
+
+            layer: [
+                // 1) connecting line
+                {
+                    mark: { type: "rule", stroke: "#b2b2b2", strokeWidth: 3, opacity: 1, clip: true },
+                    encoding: {
+                        y: {
+                            field: "SA2_NAME21", type: "nominal",
+                            sort: { field: "abs_resid", order: "descending" }, title: null
+                        },
+                        x: { field: "band_mean", type: "quantitative", title: "UHI (°C)", scale: { domain: [0, 12] } },
+                        x2: { field: "uhi_mean" },
+                        tooltip: [
+                            { field: "SA2_NAME21", title: "SA2" },
+                            { field: "SA2_CODE21", title: "SA2 code" },
+                            { field: "band_mean", title: "Band mean UHI (°C)", format: ".2f" },
+                            { field: "uhi_mean", title: "Observed UHI (°C)", format: ".2f" },
+                            { field: "resid", title: "Gap (obs - band, °C)", format: "+.2f" },
+                            { field: "tc_bin_start", title: "Tree cover band start (%)", format: ".0f" }
+                        ]
+                    }
+                },
+
+                // 2) expected value (band mean) - small grey dot
+                {
+                    mark: { type: "point", filled: true, size: 40, color: "#777", opacity: 1 },
+                    encoding: {
+                        y: { field: "SA2_NAME21", type: "nominal", sort: { field: "abs_resid", order: "descending" } },
+                        x: { field: "band_mean", type: "quantitative", scale: { domain: [0, 12] } },
+                    }
+                },
+
+                // 3) observed value - colored square by residual (diverging)
+                {
+                    mark: { type: "square", size: 80, opacity: 0.95 },
+                    encoding: {
+                        y: { field: "SA2_NAME21", type: "nominal", sort: { field: "abs_resid", order: "descending" } },
+                        x: { field: "uhi_mean", type: "quantitative", scale: { domain: [0, 12] } },
+                        color: {
+                            field: "resid", type: "quantitative",
+                            title: "Residual (°C)",
+                            // symmetric, 0-centered diverging scale
+                            scale: { scheme: "redblue", domain: [-4, 0, 4] }
+                        },
+                        tooltip: [
+                            { field: "SA2_NAME21", title: "SA2" },
+                            { field: "SA2_CODE21", title: "SA2 code" },
+                            { field: "tree_pct", title: "Tree cover (%)", format: ".1f" },
+                            { field: "band_mean", title: "Band mean UHI (°C)", format: ".2f" },
+                            { field: "uhi_mean", title: "Observed UHI (°C)", format: ".2f" },
+                            { field: "resid", title: "Residual (°C)", format: "+.2f" }
+                        ]
+                    }
+                }
+            ],
+
+            config: {
+                axis: { labelFontSize: 12, titleFontSize: 12 },
+                legend: { titleFontSize: 12, labelFontSize: 12 },
+                view: { stroke: null }
+            }
+        };
+
+        vegaEmbed("#dumbbell", dumbbellSpec, { actions: false });
+    </script>
+</body>
+
+</html>
